@@ -15,8 +15,8 @@ def send_message(msg, client_socket):
   
   length += b' ' * (HEADER - len(length))
   
-  client_socket(length)
-  client_socket(message)
+  client_socket.send(length)
+  client_socket.send(message)
 #send_message
 
 def start_client():
