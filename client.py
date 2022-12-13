@@ -1,2 +1,5 @@
 import socket
 
+#variables
+
+#methods?
