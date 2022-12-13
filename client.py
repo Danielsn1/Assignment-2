@@ -1,0 +1,5 @@
+import socket
+
+#variables
+
+#methods?
