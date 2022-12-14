@@ -20,7 +20,7 @@ server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server_socket.bind(ADDR)
 
 
-def parse_header(header: bytes):
+def parse_header(header: bytes) -> tuple[str, dict]:
     '''
     This function takes in an http header and returns the request along with all of the 
     key value header lines
@@ -80,16 +80,16 @@ def handle_client(conn, addr):
 
     request, header_lines = parse_header(header)
 
-    if(not valid_request(request)):
+    if (not valid_request(request)):
         responses(400, conn)
 
     # checks if content lenght is defined denoting the existance of a body
-    if(content_length := header_lines.get('Content-Length')):
+    if (content_length := header_lines.get('Content-Length')):
         # Gathers the type of the content being sent
-        if(content_type := header_lines['Content-Type']):
+        if (content_type := header_lines['Content-Type']):
             print(len(partial_message))
             # checks if the entire body was read within the first 8KB
-            if(len(partial_message) < content_length):
+            if (len(partial_message) < content_length):
                 # if body was not read within first 8KB the rest of the body is
                 # read and joined with existing portion of the body
                 message = bytes.join([partial_message, conn.recv(
