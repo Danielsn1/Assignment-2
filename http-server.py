@@ -51,7 +51,7 @@ def valid_url(url: str) -> bool:
     '''
     Takes in a http url and determines whether or not it is a valid url
     '''
-    pass
+    return True
 
 
 def valid_request(request: str) -> bool:
@@ -99,10 +99,6 @@ def handle_client(conn, addr):
         else:
             responses(400, conn)
 
-    connected = True
-
-    filename = None
-
     if filename != None:
 
         file_dir = find_files(filename, os.path.dirname(__file__))
@@ -111,9 +107,9 @@ def handle_client(conn, addr):
             responces(400, conn)
         else:
             print("selected file: ", filename)
-            conn.SendData(filename)
-            conn.SendFile(filename, file_dir)
-            responces(200, conn, body="File found")
+            with open(file_dir, 'rb') as f:
+                contents = f.read()
+            responces(200, conn, body=contents)
     else:
         responces(200, conn, body="hello")
 
