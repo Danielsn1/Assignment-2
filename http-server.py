@@ -234,6 +234,16 @@ def responses(code, conn, entity_body=None, head=False) -> None:
     print("[CONNECTION CLOSE]")
 #responses()
 
+def send_all(responce_message, conn):
+    length = len(responce_message)
+    sent_bytes = 0 
+    while length < sent_bytes:
+        sent_bytes = conn.send(responce_message)
+    else: 
+        print("All Bytes Sent")
+#send_all()
+
+
 
 #MAIN
 if __name__ == "__main__":
