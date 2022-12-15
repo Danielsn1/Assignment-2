@@ -21,10 +21,11 @@ def get_request(host, uri):
 
 
 def post_request(host, uri, msg):
+    print(host, type(host))
     request_line = "POST " + uri + " " + HTTP_VERSION + "\n"
     header_lines = "Host: " + host + "\n" +\
         "Connection: close\n" +\
-        "Content-Length: " + len(msg.encode(FORMAT)) + "\n" +\
+        "Content-Length: " + str(len(msg.encode(FORMAT))) + "\n" +\
         "Content-Type: text/text\n"
 
     return (request_line + header_lines + '\n' + msg).encode(FORMAT)
@@ -35,7 +36,7 @@ def put_request(host, uri, msg):
     request_line = "PUT " + uri + " " + HTTP_VERSION + "\n"
     header_lines = "Host: " + host + "\n" +\
         "Connection: close\n" +\
-        "Content-Length: " + len(msg) + "\n" +\
+        "Content-Length: " + str(len(msg)) + "\n" +\
         "Content-Type: text/text\n"
 
     return (request_line + header_lines + '\n').encode(FORMAT) + msg

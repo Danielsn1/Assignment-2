@@ -1,6 +1,8 @@
 import socket
 import threading
 import os
+import sys
+import datetime
 
 #temp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 #temp_socket.connect(("8.8.8.8", 53))
@@ -13,7 +15,7 @@ PORT = 8081
 ADDR = (SERVER_IP, PORT)
 LEN_MESSAGE = 2**13
 FORMAT = 'utf-8'
-HTTP_VERSION = "1.1"
+HTTP_VERSION = "HTTP/1.1"
 VALID_METHODS = ['GET', 'PUT', 'HEAD', 'POST', 'DELETE']
 
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -35,8 +37,10 @@ def parse_header(header: bytes) -> tuple[str, dict]:
         # creates key and value pair from the header lines and stores them in the dictionary
         key, value = field.split(': ', 1)
         header_lines[key] = value
+    # for
 
     return (request, header_lines)
+# parse_header()
 
 
 def start():
@@ -45,13 +49,8 @@ def start():
         conn, addr = server_socket.accept()
         thread = threading.Thread(target=handle_client, args=(conn, addr))
         thread.start()
-
-
-def valid_url(url: str) -> bool:
-    '''
-    Takes in a http url and determines whether or not it is a valid url
-    '''
-    return True
+    # while
+# start()
 
 
 def valid_request(request: str) -> bool:
@@ -61,19 +60,21 @@ def valid_request(request: str) -> bool:
     the method defined is a valid method
     '''
     method, url, version = request.split(maxsplit=2)
-    return method in VALID_METHODS and valid_url(url) and version == HTTP_VERSION
+    return method in VALID_METHODS and version == HTTP_VERSION
+# valid_request()
 
 
 def handle_client(conn, addr):
     print("[NEW CONNECTION] address ", addr)
 
     # reads first 8KB from the socket
-    initial_message = conn.recv(LEN_MESSAGE).decode(FORMAT)
+    initial_message = conn.recv(LEN_MESSAGE)
 
     # checks if the header exceeds the 8KB limit and sends a bad request error
     # if it is found that it does exceed the limit
     if b'\n\n' not in initial_message:
-        responses(400, conn)
+        responses('400', conn)
+    # if
 
     # gets the header and any of the body that was within the first 8KB read.
     header, partial_message = initial_message.split(b'\n\n', 1)
@@ -81,13 +82,13 @@ def handle_client(conn, addr):
     request, header_lines = parse_header(header)
 
     if (not valid_request(request)):
-        responses(400, conn)
+        responses('400', conn)
+    # if
 
     # checks if content lenght is defined denoting the existance of a body
-    if (content_length := header_lines.get('Content-Length')):
+    if (content_length := int(header_lines.get('Content-Length'))):
         # Gathers the type of the content being sent
         if (content_type := header_lines['Content-Type']):
-            print(len(partial_message))
             # checks if the entire body was read within the first 8KB
             if (len(partial_message) < content_length):
                 # if body was not read within first 8KB the rest of the body is
@@ -96,54 +97,149 @@ def handle_client(conn, addr):
                     content_length - len(partial_message))])
             else:
                 message = partial_message
+            # if/else
         else:
-            responses(400, conn)
+            responses('400', conn)
+        # if/else
+    # if
 
-    if filename != None:
+    method, url, _ = request.split(maxsplit=2)
 
-        file_dir = find_files(filename, os.path.dirname(__file__))
+    if method == 'GET':
 
-        if file_dir == []:
-            responces(400, conn)
+        potential_file = os.path.join(
+            os.path.dirname(__file__), url.replace('/', '', 1))
+
+        if not os.path.exists(potential_file):
+            responses('404', conn)
         else:
-            print("selected file: ", filename)
-            with open(file_dir, 'rb') as f:
+            print("selected file: ", potential_file)
+            with open(potential_file, 'rb') as f:
                 contents = f.read()
-            responces(200, conn, body=contents)
-    else:
-        responces(200, conn, body="hello")
+            responses('200', conn, entity_body=contents)
+        # if/else
 
-    while connected:
-        if msg_length:
-            length_of_message = int(msg_length)
-            print("[MESSAGE LENGTH] ", length_of_message)
-            message = conn.recv(length_of_message).decode(FORMAT)
-            print("[MESSAGE] ", message)
+    elif method == "POST":
+        post_file = os.path.join(
+            os.path.dirname(__file__), 'post-requests.txt')
+        with open(post_file, 'ab') as f:
+            f.write(message + b'\n')
+        responses('200', conn)
+        # if/else
 
-            if message == DISCONNECT_MESSAGE:
-                connected = False
+    elif method == "HEAD":
 
-    print("[CONNECTION CLOSE] Addr: ", addr)
-    conn.close()
+        potential_file = os.path.join(
+            os.path.dirname(__file__), url.replace('/', '', 1))
 
+        if not os.path.exists(potential_file):
+            responses('404', conn)
+        else:
+            print("selected file: ", potential_file)
+            with open(potential_file, 'rb') as f:
+                contents = f.read()
+            responses('200', conn, entity_body=contents, head=True)
+        # if/else
 
-def responses(code, conn, body=None):
-    if code == "200":
-        conn.send(body)
-        conn.close
-    if code == "404":
-        conn.send('Error 404')
-        conn.close()
-    if code == "505":
+    elif method == "PUT":
         pass
+        # potential_file = os.join(os.path.dirname(__file__), url)
+
+        # if not os.path.exists(potential_file):
+        #     head_tail = os.path.split(potential_file)
+        #     tail = head_tail[1]
+        #     f = open(tail, "x")
+        #     f.write(message)
+        #     f.close()
+        #     responses('200', conn)
+        # else:
+        #     head_tail = os.path.split(potential_file)
+        #     tail = head_tail[1]
+        #     f = open(tail, 'w')
+        #     f.write(message)
+        #     f.close()
+        #     responses('200', conn)
+        # if/else
+
+    elif method == "DELETE":
+
+        potential_file = os.path.join(
+            os.path.dirname(__file__), url.replace('/', '', 1))
+
+        if not os.path.exists(potential_file):
+            responses('404', conn)
+        else:
+            print("selected file: ", potential_file)
+            os.remove(potential_file)
+            responses('200', conn)
+        # if/else
+    # if/else
+# handle_client()
 
 
-def find_files(filename, search_path):
-    result = []
-    for root, dir, files in os.walk(search_path):
-        if filename in files:
-            result.append(os.path.join(root, filename))
-    return result
+def responses(code, conn, entity_body=None, head=False):
+
+    dt = datetime.datetime.now()
+
+    if not isinstance(entity_body, bytes):
+        if entity_body is None:
+            entity_body = b''
+        else:
+            entity_body = entity_body.encode(FORMAT)
+
+    if code == "200":
+
+        status_line = HTTP_VERSION + ' ' + code + " OK" + "\n"
+        header_lines = "Connection: close " + "\n" + "Date: " + str(dt) + " CST \n" + \
+            "Server: " + "Fredrick " + "(" + sys.platform + ") \n"
+        if entity_body is not None:
+            header_lines += "Content-Length: " + str(len(entity_body)) + '\n' + \
+                "Content-Type: text/text" + '\n'
+        # if
+        response_message = status_line + header_lines + '\n'
+        response_message = response_message.encode(FORMAT)
+
+        if head is not True:
+            response_message = response_message + entity_body
+
+        conn.send(response_message)
+
+    elif code == "404":
+
+        status_line = HTTP_VERSION + ' ' + code + " Not Found" + "\n"
+        header_lines = "Connection: close " + "\n" + "Date: " + str(dt) + " CST \n" + \
+            "Server: " + "Fredrick " + "(" + sys.platform + ") \n"
+        response_message = bytes.join(
+            (status_line + header_lines + '\n').encode(FORMAT), entity_body)
+        conn.send(response_message)
+
+    elif code == "505":
+
+        status_line = HTTP_VERSION + ' ' + code + " HTTP Version Not Supported" + "\n"
+        entity_body = "The HTTP protocol you are asking for is unsupported "
+        header_lines = "Connection: close " + "\n" + "Date: " + str(dt) + " CST \n" + \
+            "Server: " + "Fredrick " + "(" + sys.platform + ") \n" + \
+            "Content-Length: " + str(len(entity_body)) + '\n' + \
+            "Content-Type: text/text" + '\n'
+        response_message = bytes.join(
+            (status_line + header_lines + '\n').encode(FORMAT), entity_body)
+        conn.send(response_message)
+
+    elif code == '400':
+
+        status_line = HTTP_VERSION + ' ' + code + " Bad Request" + "\n"
+        header_lines = "Connection: close " + "\n" + "Date: " + str(dt) + " CST \n" + \
+            "Server: " + "Fredrick " + "(" + sys.platform + ") \n" + \
+            "Content-Length: " + str(len(entity_body)) + '\n' + \
+            "Content-Type: text/text" + '\n'
+        response_message = bytes.join(
+            (status_line + header_lines + '\n').encode(FORMAT), entity_body)
+        conn.send(response_message)
+    # if/else
+
+    conn.close()
+    print("[CONNECTION CLOSE]")
+# responses()
 
 
 start()
