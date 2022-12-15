@@ -1,7 +1,7 @@
 import socket
 import os
 
-# variables
+#CONSTANTS
 HEADER = 64
 FORMAT = 'utf-8'
 QUIT_PROMPT = 'quit'
@@ -10,18 +10,18 @@ SERVER_PORT = 8081
 LEN_MESSAGE = 2**14
 HTTP_VERSION = "HTTP/1.1"
 
-
-# methods
+#METHODS
 def get_request(host, uri):
     request_line = "GET " + uri + " " + HTTP_VERSION + "\n"
     header_lines = "Host: " + host + "\nConnection: close\n"
 
     return (request_line + header_lines + '\n').encode(FORMAT)
-# get_reqeust()
+#get_reqeust()
 
 
 def post_request(host, uri, msg):
     print(host, type(host))
+    
     request_line = "POST " + uri + " " + HTTP_VERSION + "\n"
     header_lines = "Host: " + host + "\n" +\
         "Connection: close\n" +\
@@ -29,7 +29,7 @@ def post_request(host, uri, msg):
         "Content-Type: text/text\n"
 
     return (request_line + header_lines + '\n' + msg).encode(FORMAT)
-# post_reqeust()
+#post_reqeust()
 
 
 def put_request(host, uri, msg):
@@ -40,7 +40,7 @@ def put_request(host, uri, msg):
         "Content-Type: text/text\n"
 
     return (request_line + header_lines + '\n').encode(FORMAT) + msg
-# put_reqeust()
+#put_reqeust()
 
 
 def delete_request(host, uri):
@@ -49,7 +49,7 @@ def delete_request(host, uri):
         "Connection: close\n"
 
     return (request_line + header_lines + '\n').encode(FORMAT)
-# delete_reqeust()
+#delete_reqeust()
 
 
 def head_request(host, uri):
@@ -58,7 +58,7 @@ def head_request(host, uri):
         "Connection: close\n"
 
     return (request_line + header_lines + '\n').encode(FORMAT)
-# head_reqeust()
+#head_reqeust()
 
 
 def request(method: str, host: str, uri: str, msg: str = None):
@@ -75,7 +75,7 @@ def request(method: str, host: str, uri: str, msg: str = None):
         client_socket.send(delete_request(host, uri))
     elif method == 'HEAD':
         client_socket.send(head_request(host, uri))
-    # if/else
+    #if/else
 
     # reads first 8KB from the socket
     initial_message = client_socket.recv(LEN_MESSAGE)
@@ -83,7 +83,7 @@ def request(method: str, host: str, uri: str, msg: str = None):
     # reads in header information 4KB at a time
     while b'\n\n' not in initial_message:
         initial_message = client_socket.recv(LEN_MESSAGE)
-    # while
+    #while
 
     # gets the header and any of the body that was within the first 8KB read.
     header, partial_message = initial_message.split(b'\n\n', 1)
@@ -97,28 +97,35 @@ def request(method: str, host: str, uri: str, msg: str = None):
     # checks if content lenght is defined denoting the existance of a body
     if (content_length := int(header_lines.get('Content-Length'))):
         # Gathers the type of the content being sent
+        
         content_type = header_lines['Content-Type']
         print(len(partial_message))
+        
         # checks if the entire body was read within the first 8KB
         if (len(partial_message) < content_length):
             # if body was not read within first 8KB the rest of the body is
             # read and joined with existing portion of the body
+            
             message = partial_message + client_socket.recv(
                 content_length - len(partial_message))
+            
         else:
             message = partial_message
-            # if/else
-        # if
-    # if
+
+        #if/else
+    #if
+    
     print(response)
+    
     if message is not None:
         print(message.decode(FORMAT))
+    #if
 
     if method == 'GET' and response.split()[1] == "200":
         with open(os.path.split(uri)[1], 'wb') as f:
             f.write(message)
-    # if
-    # request()
+    #if
+#request()
 
 
 def parse_header(header: bytes) -> tuple[str, dict]:
@@ -138,7 +145,7 @@ def parse_header(header: bytes) -> tuple[str, dict]:
         header_lines[key] = value
 
     return (request, header_lines)
-# parse_header()
+#parse_header()
 
 
 def start_client():
@@ -155,20 +162,20 @@ def start_client():
 
         if (msg_type == QUIT_PROMPT):
             break
-        # if
+        #if
 
         host = input("Enter server address (or " +
                      QUIT_PROMPT + " to exit)  :\n")
 
         if (host == QUIT_PROMPT):
             break
-        # if
+        #if
 
         msg_uri = input("Enter HTTP Request URI  :\n")
 
         if (msg_uri == QUIT_PROMPT):
             break
-        # if
+        #if
 
         if (msg_type == '1'):
             request('GET', host, msg_uri)
@@ -179,7 +186,7 @@ def start_client():
 
             if (msg == QUIT_PROMPT):
                 break
-            # if
+            #if
 
             request('POST', host, msg_uri, msg)
 
@@ -189,7 +196,7 @@ def start_client():
 
             if (msg == QUIT_PROMPT):
                 break
-            # if
+            #if
 
             request('PUT', host, msg_uri, msg)
 
@@ -202,12 +209,13 @@ def start_client():
         else:
             print("Improper Message Format: HTTP Message Type Code Not Recognized")
             print("Enter Numerical Code for Desired HTTP Message Type")
-        # if/else
-    # while
-# start_client()
+            
+        #if/else
+    #while
+#start_client()
 
 
-# main
+#MAIN
 if __name__ == '__main__':
     start_client()
-# main()
+#main()
