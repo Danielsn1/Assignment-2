@@ -4,12 +4,7 @@ import os
 import sys
 import datetime
 
-#temp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-#temp_socket.connect(("8.8.8.8", 53))
-# temp_socket.getsockname()[0]
-# temp_socket.close()
-
-# Consts
+#CONSTANTS
 SERVER_IP = socket.gethostbyname(socket.gethostname())
 PORT = 8081
 ADDR = (SERVER_IP, PORT)
@@ -18,10 +13,7 @@ FORMAT = 'utf-8'
 HTTP_VERSION = "HTTP/1.1"
 VALID_METHODS = ['GET', 'PUT', 'HEAD', 'POST', 'DELETE']
 
-server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server_socket.bind(ADDR)
-
-
+#METHODS
 def parse_header(header: bytes) -> tuple[str, dict]:
     '''
     This function takes in an http header and returns the request along with all of the 
@@ -33,23 +25,26 @@ def parse_header(header: bytes) -> tuple[str, dict]:
     request = header.pop(0)
 
     header_lines = {}
+    
     for field in header:
         # creates key and value pair from the header lines and stores them in the dictionary
         key, value = field.split(': ', 1)
         header_lines[key] = value
-    # for
+    #for
 
     return (request, header_lines)
-# parse_header()
+#parse_header()
 
 
 def start():
     server_socket.listen(5)
+    
     while True:
         conn, addr = server_socket.accept()
         thread = threading.Thread(target=handle_client, args=(conn, addr))
         thread.start()
     # while
+    
 # start()
 
 
@@ -64,6 +59,7 @@ def valid_request(request: str) -> bool:
 # valid_request()
 
 
+
 def handle_client(conn, addr):
     print("[NEW CONNECTION] address ", addr)
 
@@ -74,7 +70,7 @@ def handle_client(conn, addr):
     # if it is found that it does exceed the limit
     if b'\n\n' not in initial_message:
         responses('400', conn)
-    # if
+    #if
 
     # gets the header and any of the body that was within the first 8KB read.
     header, partial_message = initial_message.split(b'\n\n', 1)
@@ -83,7 +79,7 @@ def handle_client(conn, addr):
 
     if (not valid_request(request)):
         responses('400', conn)
-    # if
+    #if
 
     # checks if content lenght is defined denoting the existance of a body
     if (content_length := int(header_lines.get('Content-Length'))):
@@ -100,8 +96,8 @@ def handle_client(conn, addr):
             # if/else
         else:
             responses('400', conn)
-        # if/else
-    # if
+        #if/else
+    #if
 
     method, url, _ = request.split(maxsplit=2)
 
@@ -117,7 +113,7 @@ def handle_client(conn, addr):
             with open(potential_file, 'rb') as f:
                 contents = f.read()
             responses('200', conn, entity_body=contents)
-        # if/else
+        #if/else
 
     elif method == "POST":
         post_file = os.path.join(
@@ -125,7 +121,7 @@ def handle_client(conn, addr):
         with open(post_file, 'ab') as f:
             f.write(message + b'\n')
         responses('200', conn)
-        # if/else
+        #if/else
 
     elif method == "HEAD":
 
@@ -139,7 +135,7 @@ def handle_client(conn, addr):
             with open(potential_file, 'rb') as f:
                 contents = f.read()
             responses('200', conn, entity_body=contents, head=True)
-        # if/else
+        #if/else
 
     elif method == "PUT":
         pass
@@ -172,10 +168,9 @@ def handle_client(conn, addr):
             print("selected file: ", potential_file)
             os.remove(potential_file)
             responses('200', conn)
-        # if/else
-    # if/else
-# handle_client()
-
+        #if/else
+    #if/else
+#handle_client()
 
 def responses(code, conn, entity_body=None, head=False):
 
@@ -195,7 +190,7 @@ def responses(code, conn, entity_body=None, head=False):
         if entity_body is not None:
             header_lines += "Content-Length: " + str(len(entity_body)) + '\n' + \
                 "Content-Type: text/text" + '\n'
-        # if
+        #if
         response_message = status_line + header_lines + '\n'
         response_message = response_message.encode(FORMAT)
 
@@ -235,11 +230,15 @@ def responses(code, conn, entity_body=None, head=False):
         response_message = bytes.join(
             (status_line + header_lines + '\n').encode(FORMAT), entity_body)
         conn.send(response_message)
-    # if/else
+    #if/else
 
     conn.close()
     print("[CONNECTION CLOSE]")
-# responses()
+#responses()
 
-
-start()
+#MAIN
+if __name__ == "__main__":
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.bind(ADDR)
+    start()
+#main()
