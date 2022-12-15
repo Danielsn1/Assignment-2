@@ -102,16 +102,16 @@ def request(method: str, host: str, uri: str, msg: str = None):
         if (len(partial_message) < content_length):
             # if body was not read within first 8KB the rest of the body is
             # read and joined with existing portion of the body
-            message = bytes.join([partial_message, client_socket.recv(
-                content_length - len(partial_message))])
+            message = partial_message + client_socket.recv(
+                content_length - len(partial_message))
         else:
             message = partial_message
             # if/else
         # if
     # if
-
-    if response.split()[1] == "200":
-        print(response, message.decode(FORMAT), sep='\n')
+    print(response)
+    if message is not None:
+        print(message.decode(FORMAT))
 
     if method == 'GET' and response.split()[1] == "200":
         with open(os.path.split(uri)[1], 'wb') as f:
