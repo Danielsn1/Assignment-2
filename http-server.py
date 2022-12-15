@@ -237,9 +237,13 @@ def responses(code, conn, entity_body=None, head=False) -> None:
 def send_all(response_message, conn):
     length = len(response_message) 
     sent_bytes = 0 
+    packets = 0
     while length > sent_bytes:
         sent_bytes += conn.send(response_message[sent_bytes:])
+        print("Bytes sent: ", sent_bytes)
+        packets = packets + 1 
     else: 
+        print("Packets sent: ", packets)
         print("All Bytes Sent")
 #send_all()
 
