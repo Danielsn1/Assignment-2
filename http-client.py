@@ -9,6 +9,16 @@ LEN_MESSAGE = 2**12
 HTTP_VERSION = "HTTP/1.1"
 
 #METHODS
+def send_all(response_message: bytes, conn: socket.socket) -> None:
+    length = len(response_message)
+    sent_bytes = 0 
+    while sent_bytes < length:
+        sent_bytes += conn.send(response_message[sent_bytes:])
+    else: 
+        print("All Bytes Sent")
+#send_all()
+
+
 def get_request(host: str, uri: str) -> bytes:
     request_line = "GET " + uri + " " + HTTP_VERSION + "\n"
     header_lines = "Host: " + host + "\nConnection: close\n"
@@ -62,15 +72,15 @@ def request(method: str, host: str, uri: str, msg: str = None) -> None:
     client_socket.connect((host, SERVER_PORT))
 
     if method == 'GET':
-        client_socket.send(get_request(host, uri))
+        send_all(get_request(host, uri), client_socket)
     elif method == 'POST':
-        client_socket.send(post_request(host, uri, msg))
+        send_all(post_request(host, uri, msg), client_socket)
     elif method == 'PUT':
-        client_socket.send(put_request(host, uri, msg))
+        send_all(put_request(host, uri, msg), client_socket)
     elif method == 'DELETE':
-        client_socket.send(delete_request(host, uri))
+        send_all(delete_request(host, uri), client_socket)
     elif method == 'HEAD':
-        client_socket.send(head_request(host, uri))
+        send_all(head_request(host, uri), client_socket)
     #if/else
 
     # reads first 4KB from the socket
