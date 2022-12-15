@@ -201,14 +201,14 @@ def responses(code, conn, entity_body=None, head=False) -> None:
         if head is not True:
             response_message = response_message + entity_body
 
-        conn.send(response_message)
+        send_all(response_message, conn)
 
     elif code == "404":
         status_line = HTTP_VERSION + ' ' + code + " Not Found" + "\n"
         header_lines = "Connection: close " + "\n" + "Date: " + str(dt) + " CST \n" + \
             "Server: " + "Fredrick " + "(" + sys.platform + ") \n"
         response_message = (status_line + header_lines + '\n').encode(FORMAT) + entity_body
-        conn.send(response_message)
+        send_all(response_message, conn)
 
     elif code == "505":
         status_line = HTTP_VERSION + ' ' + code + " HTTP Version Not Supported" + "\n"
@@ -218,7 +218,7 @@ def responses(code, conn, entity_body=None, head=False) -> None:
             "Content-Length: " + str(len(entity_body)) + '\n' + \
             "Content-Type: text/text" + '\n'
         response_message = (status_line + header_lines + '\n').encode(FORMAT) + entity_body
-        conn.send(response_message)
+        send_all(response_message, conn)
 
     elif code == '400':
         status_line = HTTP_VERSION + ' ' + code + " Bad Request" + "\n"
@@ -227,7 +227,7 @@ def responses(code, conn, entity_body=None, head=False) -> None:
             "Content-Length: " + str(len(entity_body)) + '\n' + \
             "Content-Type: text/text" + '\n'
         response_message = (status_line + header_lines + '\n').encode(FORMAT) + entity_body
-        conn.send(response_message)
+        send_all(response_message, conn)
     #if/else
 
     conn.close()
@@ -235,11 +235,15 @@ def responses(code, conn, entity_body=None, head=False) -> None:
 #responses()
 
 def send_all(response_message, conn):
-    length = len(response_message) + 1
+    length = len(response_message) 
     sent_bytes = 0 
-    while length < sent_bytes:
-        sent_bytes += conn.send(response_message)
+    packets = 0
+    while length > sent_bytes:
+        sent_bytes += conn.send(response_message[sent_bytes:])
+        print("Bytes sent: ", sent_bytes)
+        packets = packets + 1 
     else: 
+        print("Packets sent: ", packets)
         print("All Bytes Sent")
 #send_all()
 
