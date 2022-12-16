@@ -12,10 +12,9 @@ HTTP_VERSION = "HTTP/1.1"
 def send_all(response_message: bytes, conn: socket.socket) -> None:
     length = len(response_message)
     sent_bytes = 0 
+    
     while sent_bytes < length:
         sent_bytes += conn.send(response_message[sent_bytes:])
-    else: 
-        print("All Bytes Sent")
 #send_all()
 
 
@@ -88,7 +87,7 @@ def request(method: str, host: str, uri: str, msg: str = None) -> None:
 
     # reads in header information 4KB at a time
     while b'\n\n' not in initial_message:
-        initial_message = client_socket.recv(LEN_MESSAGE)
+        initial_message += client_socket.recv(LEN_MESSAGE)
     #while
 
     # gets the header and any of the body that was within the first 8KB read.
@@ -113,6 +112,8 @@ def request(method: str, host: str, uri: str, msg: str = None) -> None:
             message = partial_message
         #if/else
     #if
+    
+    client_socket.close()
     
     print('\n' + response)
     

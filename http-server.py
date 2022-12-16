@@ -240,11 +240,10 @@ def send_all(response_message, conn):
     packets = 0
     while length > sent_bytes:
         sent_bytes += conn.send(response_message[sent_bytes:])
-        print("Bytes sent: ", sent_bytes)
-        packets = packets + 1 
+        packets += 1 
     else: 
-        print("Packets sent: ", packets)
-        print("All Bytes Sent")
+        print("[Packets Sent]: ", packets)
+        print("[Total Bytes Sent]: ", sent_bytes)
 #send_all()
 
 
