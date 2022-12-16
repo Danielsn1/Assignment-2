@@ -144,7 +144,7 @@ def handle_client(conn, addr) -> None:
 
             folder, _ = os.path.split(potential_file)
 
-            if not os.path.exists(potential_file):
+            if os.path.exists(potential_file):
                 with open(potential_file, 'wb') as f:
                     f.write(message)
                 responses('200', conn)
