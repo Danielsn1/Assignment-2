@@ -1,21 +1,23 @@
 import socket
 import os
 
-#CONSTANTS
+# CONSTANTS
 FORMAT = 'utf-8'
 QUIT_PROMPT = 'quit'
 SERVER_PORT = 8081
 LEN_MESSAGE = 2**12
 HTTP_VERSION = "HTTP/1.1"
 
-#METHODS
+# METHODS
+
+
 def send_all(response_message: bytes, conn: socket.socket) -> None:
     length = len(response_message)
-    sent_bytes = 0 
-    
+    sent_bytes = 0
+
     while sent_bytes < length:
         sent_bytes += conn.send(response_message[sent_bytes:])
-#send_all()
+# send_all()
 
 
 def get_request(host: str, uri: str) -> bytes:
@@ -23,7 +25,7 @@ def get_request(host: str, uri: str) -> bytes:
     header_lines = "Host: " + host + "\nConnection: close\n"
 
     return (request_line + header_lines + '\n').encode(FORMAT)
-#get_reqeust()
+# get_reqeust()
 
 
 def post_request(host: str, uri: str, msg: str) -> bytes:
@@ -34,7 +36,7 @@ def post_request(host: str, uri: str, msg: str) -> bytes:
         "Content-Type: text/text\n"
 
     return (request_line + header_lines + '\n' + msg).encode(FORMAT)
-#post_reqeust()
+# post_reqeust()
 
 
 def put_request(host: str, uri: str, msg: str) -> bytes:
@@ -45,7 +47,7 @@ def put_request(host: str, uri: str, msg: str) -> bytes:
         "Content-Type: text/text\n"
 
     return (request_line + header_lines + '\n').encode(FORMAT) + msg
-#put_reqeust()
+# put_reqeust()
 
 
 def delete_request(host: str, uri: str) -> bytes:
@@ -54,7 +56,7 @@ def delete_request(host: str, uri: str) -> bytes:
         "Connection: close\n"
 
     return (request_line + header_lines + '\n').encode(FORMAT)
-#delete_reqeust()
+# delete_reqeust()
 
 
 def head_request(host: str, uri: str) -> bytes:
@@ -63,7 +65,7 @@ def head_request(host: str, uri: str) -> bytes:
         "Connection: close\n"
 
     return (request_line + header_lines + '\n').encode(FORMAT)
-#head_reqeust()
+# head_reqeust()
 
 
 def request(method: str, host: str, uri: str, msg: str = None) -> None:
@@ -80,7 +82,7 @@ def request(method: str, host: str, uri: str, msg: str = None) -> None:
         send_all(delete_request(host, uri), client_socket)
     elif method == 'HEAD':
         send_all(head_request(host, uri), client_socket)
-    #if/else
+    # if/else
 
     # reads first 4KB from the socket
     initial_message = client_socket.recv(LEN_MESSAGE)
@@ -88,7 +90,7 @@ def request(method: str, host: str, uri: str, msg: str = None) -> None:
     # reads in header information 4KB at a time
     while b'\n\n' not in initial_message:
         initial_message += client_socket.recv(LEN_MESSAGE)
-    #while
+    # while
 
     # gets the header and any of the body that was within the first 8KB read.
     header, partial_message = initial_message.split(b'\n\n', 1)
@@ -101,33 +103,33 @@ def request(method: str, host: str, uri: str, msg: str = None) -> None:
     if (content_length := int(header_lines.get('Content-Length', -1))) != -1:
         # Gathers the type of the content being sent
         content_type = header_lines['Content-Type']
-        
+
         # checks if the entire body was read within the first 4KB
         if (len(partial_message) < content_length):
             # if body was not read within first 8KB the rest of the body is
             # read and joined with existing portion of the body
             message = partial_message + client_socket.recv(
-                content_length - len(partial_message)) 
+                content_length - len(partial_message))
         else:
             message = partial_message
-        #if/else
-    #if
-    
+        # if/else
+    # if
+
     client_socket.close()
-    
+
     print('\n' + response)
-    
+
     if message is not None:
         print(message.decode(FORMAT))
-    #if
+    # if
 
     if method == 'GET' and response.split()[1] == "200":
         with open(os.path.split(uri)[1], 'wb') as f:
             f.write(message)
-    #if
-    
+    # if
+
     print()
-#request()
+# request()
 
 
 def parse_header(header: bytes) -> tuple[str, dict]:
@@ -147,7 +149,7 @@ def parse_header(header: bytes) -> tuple[str, dict]:
         header_lines[key] = value
 
     return (response, header_lines)
-#parse_header()
+# parse_header()
 
 
 def start_client() -> None:
@@ -162,27 +164,22 @@ def start_client() -> None:
         msg_type = input("Options:\n1:GET \n2:POST \n3:PUT \n4:DELETE \n5:HEAD\n(or " +
                          QUIT_PROMPT + " to exit)  :\n")
 
-        # this is temperary until the next assignment when we fully impliment put
-        if (msg_type == '3'):
-            print('This method is currently not implimented\n')
-            continue
-        
         if (msg_type == QUIT_PROMPT):
             break
-        #if
+        # if
 
         host = input("Enter server address (or " +
                      QUIT_PROMPT + " to exit)  :\n")
 
         if (host == QUIT_PROMPT):
             break
-        #if
+        # if
 
         msg_uri = input("Enter HTTP Request URI  :\n")
 
         if (msg_uri == QUIT_PROMPT):
             break
-        #if
+        # if
 
         if (msg_type == '1'):
             request('GET', host, msg_uri)
@@ -193,18 +190,22 @@ def start_client() -> None:
 
             if (msg == QUIT_PROMPT):
                 break
-            #if
+            # if
 
             request('POST', host, msg_uri, msg)
 
-        # this code will not execute
         elif (msg_type == '3'):
+            print(
+                "Select File to be uploaded to given URI (accepts partial and absolute paths)")
+            print("Current directory: " + os.getcwd())
             msg = input(
-                "Select File to be created at given URI (or " + QUIT_PROMPT + " to exit)  :\n")
+                "Enter here (or " + QUIT_PROMPT + " to exit)  :\n")
 
             if (msg == QUIT_PROMPT):
                 break
-            #if
+            # if/else
+
+            msg = open(os.path.join(os.getcwd(), msg), 'rb').read()
 
             request('PUT', host, msg_uri, msg)
 
@@ -215,13 +216,13 @@ def start_client() -> None:
             request('HEAD', host, msg_uri)
 
         else:
-            print("Enter Numerical Code for Desired HTTP Message Type")  
-        #if/else
-    #while
-#start_client()
+            print("Enter Numerical Code for Desired HTTP Message Type")
+        # if/else
+    # while
+# start_client()
 
 
-#MAIN
+# MAIN
 if __name__ == '__main__':
     start_client()
-#main()
+# main()
