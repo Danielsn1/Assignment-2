@@ -3,6 +3,7 @@ import threading
 import os
 import sys
 import datetime
+import mimetypes
 
 # CONSTANTS
 SERVER_IP = socket.gethostbyname(socket.gethostname())
@@ -65,7 +66,7 @@ def valid_request(request: str) -> bool | str:
 # valid_request()
 
 
-def handle_client(conn, addr) -> None:
+def handle_client(conn: socket.socket, addr: str) -> None:
     print("[NEW CONNECTION] address ", addr)
 
     # reads first 8KB from the socket
@@ -90,14 +91,14 @@ def handle_client(conn, addr) -> None:
             # Gathers the type of the content being sent
             if (content_type := header_lines['Content-Type']):
                 # checks if the entire body was read within the first 8KB
-                if (len(partial_message) < content_length):
+                while (len(partial_message) < content_length):
                     # if body was not read within first 8KB the rest of the body is
                     # read and joined with existing portion of the body
-                    message = partial_message + conn.recv(
+                    partial_message += conn.recv(
                         content_length - len(partial_message))
                 else:
                     message = partial_message
-                # if/else
+                # while/else
             else:
                 responses('400', conn)
             # if/else
@@ -115,7 +116,8 @@ def handle_client(conn, addr) -> None:
                 print("[Selected File]: ", potential_file)
                 with open(potential_file, 'rb') as f:
                     contents = f.read()
-                responses('200', conn, entity_body=contents)
+                responses('200', conn, entity_body=(
+                    contents, mimetypes.guess_type(potential_file)[0]))
             # if/else
 
         elif method == "POST":
@@ -135,7 +137,8 @@ def handle_client(conn, addr) -> None:
                 print("[Selected File]: ", potential_file)
                 with open(potential_file, 'rb') as f:
                     contents = f.read()
-                responses('200', conn, entity_body=contents, head=True)
+                responses('200', conn, entity_body=(
+                    contents, mimetypes.guess_type(potential_file)[0]), head=True)
             # if/else
 
         elif method == "PUT":
@@ -151,7 +154,7 @@ def handle_client(conn, addr) -> None:
             elif os.path.isdir(folder):
                 with open(potential_file, 'wb') as f:
                     f.write(message)
-                responses('201', conn, url)
+                responses('201', conn, (url, 'text/text'))
             else:
                 responses('400', conn)
             # if/else
@@ -174,31 +177,32 @@ def handle_client(conn, addr) -> None:
 # handle_client()
 
 
-def responses(code, conn, entity_body=None, head=False) -> None:
+def responses(code: str, conn: socket.socket, entity_body: tuple[bytes | str, str] = (b'', 'text/text'), head: bool = False) -> None:
     dt = datetime.datetime.now()
 
     # if the body is not bytes it is converted to bytes at this point
-    if not isinstance(entity_body, bytes):
-        if entity_body is None:
-            entity_body = b''
-        elif code != '201':
-            entity_body = entity_body.encode(FORMAT)
+    if not isinstance(entity_body[0], bytes):
+        if code != '201':
+            entity_body[0] = entity_body[0].encode(FORMAT)
+        # if/else
+    # if
 
     if code == "200":
         status_line = HTTP_VERSION + ' ' + code + " OK" + "\n"
-        header_lines = "Connection: close " + "\n" + "Date: " + str(dt) + " CST \n" + \
+        header_lines = "Connection: close " + "\n" +\
+            "Date: " + str(dt) + " CST \n" + \
             "Server: " + "Fredrick " + "(" + sys.platform + ") \n"
 
-        if entity_body is not None:
-            header_lines += "Content-Length: " + str(len(entity_body)) + '\n' + \
-                "Content-Type: text/text" + '\n'
+        if entity_body[0] != b'':
+            header_lines += "Content-Length: " + str(len(entity_body[0])) + '\n' + \
+                "Content-Type: " + entity_body[1] + '\n'
         # if
 
         response_message = status_line + header_lines + '\n'
         response_message = response_message.encode(FORMAT)
 
         if head is not True:
-            response_message = response_message + entity_body
+            response_message = response_message + entity_body[0]
 
         send_all(response_message, conn)
 
@@ -207,42 +211,48 @@ def responses(code, conn, entity_body=None, head=False) -> None:
         header_lines = "Connection: close\n" +\
             "Date: " + str(dt) + " CST \n" + \
             "Server: " + "Fredrick " + "(" + sys.platform + ")\n" + \
-            "Location: " + entity_body + "\n" + \
-            "Content-Length: " + str(len(entity_body)) + '\n' + \
+            "Location: " + entity_body[0] + "\n" + \
+            "Content-Length: " + str(len(entity_body[0])) + '\n' + \
             "Content-Type: text/text\n"
 
-        response_message = status_line + header_lines + '\n' + entity_body
+        response_message = status_line + header_lines + '\n' + entity_body[0]
         response_message = response_message.encode(FORMAT)
 
         send_all(response_message, conn)
 
     elif code == "404":
         status_line = HTTP_VERSION + ' ' + code + " Not Found" + "\n"
-        header_lines = "Connection: close " + "\n" + "Date: " + str(dt) + " CST \n" + \
+        header_lines = "Connection: close " + "\n" +\
+            "Date: " + str(dt) + " CST \n" + \
             "Server: " + "Fredrick " + "(" + sys.platform + ") \n"
+
         response_message = (status_line + header_lines +
-                            '\n').encode(FORMAT) + entity_body
+                            '\n').encode(FORMAT) + entity_body[0]
         send_all(response_message, conn)
 
     elif code == "505":
         status_line = HTTP_VERSION + ' ' + code + " HTTP Version Not Supported" + "\n"
-        entity_body = b'The HTTP version you are asking for is unsupported '
-        header_lines = "Connection: close " + "\n" + "Date: " + str(dt) + " CST \n" + \
+        entity_body = (
+            b'The HTTP version you are asking for is unsupported ', 'text/text')
+        header_lines = "Connection: close " + "\n" +\
+            "Date: " + str(dt) + " CST \n" + \
             "Server: " + "Fredrick " + "(" + sys.platform + ") \n" + \
-            "Content-Length: " + str(len(entity_body)) + '\n' + \
-            "Content-Type: text/text" + '\n'
+            "Content-Length: " + str(len(entity_body[0])) + '\n' + \
+            "Content-Type: " + entity_body[1] + '\n'
+
         response_message = (status_line + header_lines +
-                            '\n').encode(FORMAT) + entity_body
+                            '\n').encode(FORMAT) + entity_body[0]
         send_all(response_message, conn)
 
     elif code == '400':
         status_line = HTTP_VERSION + ' ' + code + " Bad Request" + "\n"
-        header_lines = "Connection: close " + "\n" + "Date: " + str(dt) + " CST \n" + \
+        header_lines = "Connection: close " + "\n" +\
+            "Date: " + str(dt) + " CST \n" + \
             "Server: " + "Fredrick " + "(" + sys.platform + ") \n" + \
-            "Content-Length: " + str(len(entity_body)) + '\n' + \
-            "Content-Type: text/text" + '\n'
+            "Content-Length: " + str(len(entity_body[0])) + '\n' + \
+            "Content-Type: " + entity_body[0] + '\n'
         response_message = (status_line + header_lines +
-                            '\n').encode(FORMAT) + entity_body
+                            '\n').encode(FORMAT) + entity_body[0]
         send_all(response_message, conn)
     # if/else
 

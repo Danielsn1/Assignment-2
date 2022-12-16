@@ -1,5 +1,6 @@
 import socket
 import os
+import mimetypes
 
 # CONSTANTS
 FORMAT = 'utf-8'
@@ -39,14 +40,14 @@ def post_request(host: str, uri: str, msg: str) -> bytes:
 # post_reqeust()
 
 
-def put_request(host: str, uri: str, msg: str) -> bytes:
+def put_request(host: str, uri: str, msg: tuple[bytes, str]) -> bytes:
     request_line = "PUT " + uri + " " + HTTP_VERSION + "\n"
     header_lines = "Host: " + host + "\n" +\
         "Connection: close\n" +\
-        "Content-Length: " + str(len(msg)) + "\n" +\
-        "Content-Type: text/text\n"
+        "Content-Length: " + str(len(msg[0])) + "\n" +\
+        "Content-Type: " + msg[1] + "\n"
 
-    return (request_line + header_lines + '\n').encode(FORMAT) + msg
+    return (request_line + header_lines + '\n').encode(FORMAT) + msg[0]
 # put_reqeust()
 
 
@@ -77,7 +78,8 @@ def request(method: str, host: str, uri: str, msg: str = None) -> None:
     elif method == 'POST':
         send_all(post_request(host, uri, msg), client_socket)
     elif method == 'PUT':
-        send_all(put_request(host, uri, msg), client_socket)
+        send_all(put_request(
+            host, uri, (msg, mimetypes.guess_type(uri)[0])), client_socket)
     elif method == 'DELETE':
         send_all(delete_request(host, uri), client_socket)
     elif method == 'HEAD':
@@ -99,27 +101,28 @@ def request(method: str, host: str, uri: str, msg: str = None) -> None:
 
     message = None
 
+    print(header_lines)
+
     # checks if content lenght is defined denoting the existance of a body
     if (content_length := int(header_lines.get('Content-Length', -1))) != -1:
         # Gathers the type of the content being sent
         content_type = header_lines['Content-Type']
 
-        # checks if the entire body was read within the first 4KB
-        if (len(partial_message) < content_length):
-            # if body was not read within first 8KB the rest of the body is
-            # read and joined with existing portion of the body
-            message = partial_message + client_socket.recv(
+        # checks if the entire body has been read and recieves the rest of the message
+        while (len(partial_message) < content_length):
+            # the body is constructed by reccuring recv calls
+            partial_message += client_socket.recv(
                 content_length - len(partial_message))
         else:
             message = partial_message
-        # if/else
+        # while/else
     # if
 
     client_socket.close()
 
     print('\n' + response)
 
-    if message is not None:
+    if message is not None and content_type.split('/')[0] == 'text':
         print(message.decode(FORMAT))
     # if
 
